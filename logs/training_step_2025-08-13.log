@@ -1,0 +1,4 @@
+{"session_id": "bbee9bbb-875a-4621-ae9d-5e6ea626c3a9", "employee_id": "E999", "step_number": 1, "step_name": "填写信息", "timestamp": "2025-08-13T14:09:37.140278", "write_time": "2025-08-13T14:09:37.140295"}
+{"session_id": "bbee9bbb-875a-4621-ae9d-5e6ea626c3a9", "employee_id": "E999", "step_number": 2, "step_name": "上传材料", "timestamp": "2025-08-13T14:09:37.179692", "write_time": "2025-08-13T14:09:37.179708"}
+{"session_id": "bbee9bbb-875a-4621-ae9d-5e6ea626c3a9", "employee_id": "E999", "step_number": 3, "step_name": "核审进度", "timestamp": "2025-08-13T14:09:37.219104", "write_time": "2025-08-13T14:09:37.219118"}
+{"session_id": "bbee9bbb-875a-4621-ae9d-5e6ea626c3a9", "employee_id": "E999", "step_number": 4, "step_name": "短信验证", "timestamp": "2025-08-13T14:09:37.238524", "write_time": "2025-08-13T14:09:37.238539"}
