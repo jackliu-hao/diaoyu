@@ -3,8 +3,9 @@
  */
 
 // API 配置
-const API_BASE_URL = '';
-const API_KEY = 'TEST'; // 生产与开发均可使用（后端仅检查存在）
+const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_KEY = 'TEST'; // 本地开发使用
+
 
 // 工具函数：获取URL中的employee_id参数
 function getEmployeeIdFromURL() {
