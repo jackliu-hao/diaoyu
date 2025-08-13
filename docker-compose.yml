@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: phishing-app
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      - webnet
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: phishing-nginx
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+    networks:
+      - webnet
+
+volumes:
+  app_logs:
+
+networks:
+  webnet:
+    driver: bridge
