@@ -5,6 +5,9 @@ import datetime
 import base64
 import json
 import os
+import threading
+from openpyxl import Workbook, load_workbook
+import fcntl
 
 app = Flask(__name__)
 CORS(app)  # 启用跨域支持
@@ -12,6 +15,80 @@ CORS(app)  # 启用跨域支持
 # 确保logs目录存在
 if not os.path.exists('logs'):
     os.makedirs('logs')
+
+LOGS_DIR = 'logs'
+EXCEL_FILE = os.path.join(LOGS_DIR, 'training_records.xlsx')
+LOCK_FILE = os.path.join(LOGS_DIR, 'training_records.lock')
+
+excel_lock = threading.Lock()
+
+EXCEL_SHEETS = {
+    'starts': ['write_time', 'timestamp', 'session_id', 'employee_id'],
+    'steps': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number', 'step_name'],
+    'forms': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number', 'field_name', 'field_value'],
+    'completions': ['write_time', 'timestamp', 'session_id', 'employee_id', 'verification_code'],
+    'closures': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number']
+}
+
+
+def ensure_excel_workbook():
+    """Ensure the Excel workbook exists with required sheets and headers."""
+    os.makedirs(LOGS_DIR, exist_ok=True)
+    # Create lock file if not exists
+    with open(LOCK_FILE, 'a'):
+        pass
+    with excel_lock:
+        with open(LOCK_FILE, 'r+') as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                if not os.path.exists(EXCEL_FILE):
+                    wb = Workbook()
+                    # Remove default sheet
+                    default_sheet = wb.active
+                    wb.remove(default_sheet)
+                    # Create sheets with headers
+                    for sheet_name, headers in EXCEL_SHEETS.items():
+                        ws = wb.create_sheet(title=sheet_name)
+                        ws.append(headers)
+                    wb.save(EXCEL_FILE)
+                else:
+                    # Ensure all sheets and headers exist
+                    wb = load_workbook(EXCEL_FILE)
+                    for sheet_name, headers in EXCEL_SHEETS.items():
+                        if sheet_name not in wb.sheetnames:
+                            ws = wb.create_sheet(title=sheet_name)
+                            ws.append(headers)
+                        else:
+                            ws = wb[sheet_name]
+                            # If sheet is empty or header missing, write headers
+                            if ws.max_row == 0 or (ws.max_row == 1 and all(cell.value is None for cell in ws[1])):
+                                ws.append(headers)
+                    wb.save(EXCEL_FILE)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+
+
+def append_to_excel(sheet_name: str, record: dict):
+    """Append a record to the given Excel sheet in a concurrency-safe way."""
+    ensure_excel_workbook()
+    with excel_lock:
+        with open(LOCK_FILE, 'r+') as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                wb = load_workbook(EXCEL_FILE)
+                if sheet_name not in wb.sheetnames:
+                    ws = wb.create_sheet(title=sheet_name)
+                    ws.append(EXCEL_SHEETS[sheet_name])
+                else:
+                    ws = wb[sheet_name]
+                # Ensure header exists
+                if ws.max_row == 0:
+                    ws.append(EXCEL_SHEETS[sheet_name])
+                row = [record.get(col) for col in EXCEL_SHEETS[sheet_name]]
+                ws.append(row)
+                wb.save(EXCEL_FILE)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
 
 # 模拟数据库存储
 training_data = {
@@ -72,11 +149,18 @@ def record_start():
     }
     
     # 写入文件
-    write_record_to_file('start', {
+    start_record = {
         'session_id': session_id,
         'employee_id': data['employee_id'],
         'timestamp': data.get('timestamp', datetime.datetime.now().isoformat())
-    })
+    }
+    write_record_to_file('start', start_record)
+    # 写入Excel
+    excel_record = {
+        'write_time': datetime.datetime.now().isoformat(),
+        **start_record
+    }
+    append_to_excel('starts', excel_record)
     
     print(f"开始演练: 员工ID={data['employee_id']}, 会话ID={session_id}")
     
@@ -110,6 +194,8 @@ def record_step():
     }
     
     training_data['steps'].append(step_record)
+    write_record_to_file('step', step_record)
+    append_to_excel('steps', {'write_time': datetime.datetime.now().isoformat(), **step_record})
     
     print(f"进入步骤: 员工ID={data['employee_id']}, 步骤={data['step_name']}")
     
@@ -143,6 +229,8 @@ def record_form_input():
     }
     
     training_data['forms'].append(form_record)
+    write_record_to_file('form', form_record)
+    append_to_excel('forms', {'write_time': datetime.datetime.now().isoformat(), **form_record})
     
     print(f"表单输入: 员工ID={data['employee_id']}, 字段={data['field_name']}, 值={data['field_value']}")
     
@@ -180,6 +268,8 @@ def record_completion():
     }
     
     training_data['completions'].append(completion_record)
+    write_record_to_file('complete', completion_record)
+    append_to_excel('completions', {'write_time': datetime.datetime.now().isoformat(), **completion_record})
     
     print(f"完成演练: 员工ID={data['employee_id']}, 验证码={decoded_code}")
     
@@ -211,6 +301,8 @@ def record_close():
     }
     
     training_data['closures'].append(close_record)
+    write_record_to_file('close', close_record)
+    append_to_excel('closures', {'write_time': datetime.datetime.now().isoformat(), **close_record})
     
     print(f"关闭弹窗: 员工ID={data['employee_id']}, 步骤={data['step_number']}")
     

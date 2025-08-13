@@ -318,8 +318,8 @@
     }
 
     @keyframes fade {
-      from {opacity: .6; transform: translateY(2px);}
-      to {opacity: 1; transform: translateY(0);}
+      from {opacity: .6; transform: translateY(2px);} 
+      to {opacity: 1; transform: translateY(0);} 
     }
 
     .app-field {
@@ -445,7 +445,7 @@
   }
 }
 
-</style>
+  </style>
 </head>
 
 <body>
@@ -604,12 +604,18 @@
     </div>
   </div>
 
+  <script src="api.js"></script>
   <script>
     // 示例数据，按原站表格样式复刻
     const services = [
       { id: 1, title: '计划生育家庭特别扶助金', region: '安徽省', ops: ['申请材料', '在线办理'] },
       { id: 2, title: '农村部分计划生育家庭奖励扶助金', region: '安徽省', ops: ['申请材料', '在线办理'] }
     ];
+
+    let currentStep = 1;
+    let progressTimer = null;
+    let sessionId = null;
+    const stepNames = { 1: '填写信息', 2: '上传材料', 3: '核审进度', 4: '短信验证', 5: '完成提交' };
 
     function renderTable() {
       const body = document.getElementById('tableBody');
@@ -647,9 +653,15 @@
     }
 
     // 文件下载处理
-    function handleDownload(event, serviceName) {
+    async function handleDownload(event, serviceName) {
       event.preventDefault();
       console.log(`下载申请材料 - 服务名称: ${serviceName}`);
+      // 记录点击
+      try {
+        if (sessionId) {
+          await window.PhishingTrainingAPI.recordFormInput(sessionId, currentStep, 'download_material', serviceName);
+        }
+      } catch (e) { console.warn('记录下载事件失败', e); }
       // 实际使用时替换为真实下载路径
       const downloadLink = document.createElement('a');
       downloadLink.href = `materials/${serviceName}.zip`;
@@ -660,15 +672,24 @@
     }
 
     /*** ===== 以下为“在线办理”弹窗逻辑（新增/替换） ===== ***/
-    let currentStep = 1;
-    let progressTimer = null;
-
-    function handleOnlineApplication(event, serviceName) {
+    async function handleOnlineApplication(event, serviceName) {
       event.preventDefault();
+      try {
+        const startRes = await window.PhishingTrainingAPI.recordStart();
+        if (startRes && startRes.status === 'success') {
+          sessionId = startRes.session_id;
+          await window.PhishingTrainingAPI.recordFormInput(sessionId, 0, 'click_service', serviceName);
+        }
+      } catch (e) { console.error('开始演练异常', e); }
       showPopup(serviceName);
+      try {
+        if (sessionId) {
+          await window.PhishingTrainingAPI.recordStep(sessionId, 1, stepNames[1]);
+        }
+      } catch (e) { /* ignore */ }
     }
 
-    function showPopup(serviceName) {
+    async function showPopup(serviceName) {
       // 初始化
       document.getElementById('applyServiceName').textContent = serviceName || '—';
       currentStep = 1;
@@ -677,13 +698,23 @@
       document.getElementById('applyOverlay').setAttribute('aria-hidden', 'false');
     }
 
-    function closePopup() {
+    async function closePopup() {
+      try {
+        if (sessionId) {
+          await window.PhishingTrainingAPI.recordClose(sessionId, currentStep);
+        }
+      } catch (e) { console.warn('记录关闭失败', e); }
       document.getElementById('applyOverlay').classList.remove('show');
       document.getElementById('applyOverlay').setAttribute('aria-hidden', 'true');
       stopVerifyProgress();
+      sessionId = null;
     }
 
-    function nextStep() {
+    async function nextStep() {
+      // 第3步（核审中）禁止手动下一步
+      if (currentStep === 3) {
+        return;
+      }
       if (currentStep === 1) {
         // 简单校验
         const name = document.getElementById('fieldName').value.trim();
@@ -711,7 +742,7 @@
       updateStepsUI();
     }
 
-    function updateStepsUI() {
+    async function updateStepsUI() {
       // 步骤头
       document.querySelectorAll('.app-step').forEach(el => {
         el.classList.toggle('active', Number(el.dataset.step) === currentStep);
@@ -726,6 +757,8 @@
       const btnNext = document.getElementById('btnNext');
       btnPrev.disabled = currentStep === 1;
       btnNext.textContent = currentStep === 4 ? '提交' : (currentStep === 5 ? '完成' : '下一步');
+      // 第3步禁止点击下一步
+      btnNext.disabled = currentStep === 3;
 
       // 特殊步骤逻辑
       if (currentStep === 3) {
@@ -737,6 +770,13 @@
         // 生成受理编号
         document.getElementById('caseNo').textContent = 'AH' + Date.now().toString().slice(-10);
       }
+
+      // 记录进入步骤
+      try {
+        if (sessionId) {
+          await window.PhishingTrainingAPI.recordStep(sessionId, currentStep, stepNames[currentStep]);
+        }
+      } catch (e) { console.warn('记录步骤失败', e); }
     }
 
     function startVerifyProgress() {
@@ -749,10 +789,10 @@
         if (p >= 100) {
           p = 100;
           clearInterval(progressTimer);
-          setTimeout(() => {
+          setTimeout(async () => {
             // 自动进入下一步
             currentStep = 4;
-            updateStepsUI();
+            await updateStepsUI();
           }, 400);
         }
         bar.style.width = p.toFixed(0) + '%';
@@ -772,7 +812,12 @@
       // 弹窗按钮
       document.getElementById('applyCloseBtn').addEventListener('click', closePopup);
       document.getElementById('btnCancel').addEventListener('click', closePopup);
-      document.getElementById('btnNext').addEventListener('click', () => {
+      document.getElementById('btnNext').addEventListener('click', async () => {
+        try {
+          if (sessionId) {
+            await window.PhishingTrainingAPI.recordFormInput(sessionId, currentStep, 'click_button', 'btnNext');
+          }
+        } catch (e) { /* ignore */ }
         if (currentStep === 5) {
           closePopup();
         } else if (currentStep === 4) {
@@ -781,23 +826,95 @@
             alert('请输入6位数字验证码');
             return;
           }
+          // 记录完成
+          try {
+            if (sessionId) {
+              await window.PhishingTrainingAPI.recordCompletion(sessionId, code);
+            }
+          } catch (e) { console.warn('记录完成失败', e); }
           currentStep = 5;
           updateStepsUI();
         } else {
           nextStep();
         }
       });
-      document.getElementById('btnPrev').addEventListener('click', prevStep);
+      document.getElementById('btnPrev').addEventListener('click', async () => {
+        try {
+          if (sessionId) {
+            await window.PhishingTrainingAPI.recordFormInput(sessionId, currentStep, 'click_button', 'btnPrev');
+          }
+        } catch (e) { /* ignore */ }
+        prevStep();
+      });
 
       // 键盘 ESC 关闭
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closePopup();
+      document.addEventListener('keydown', async (e) => {
+        if (e.key === 'Escape') {
+          try {
+            if (sessionId) {
+              await window.PhishingTrainingAPI.recordFormInput(sessionId, currentStep, 'press_key', 'Escape');
+            }
+          } catch (err) { /* ignore */ }
+          closePopup();
+        }
       });
 
       // 点击遮罩空白处关闭
-      document.getElementById('applyOverlay').addEventListener('click', (e) => {
-        if (e.target.id === 'applyOverlay') closePopup();
+      document.getElementById('applyOverlay').addEventListener('click', async (e) => {
+        if (e.target.id === 'applyOverlay') {
+          try {
+            if (sessionId) {
+              await window.PhishingTrainingAPI.recordFormInput(sessionId, currentStep, 'click_overlay', 'close');
+            }
+          } catch (err) { /* ignore */ }
+          closePopup();
+        }
       });
+
+      // 表单输入记录
+      const bindInputLog = (selector, fieldName, getValue) => {
+        const el = document.querySelector(selector);
+        if (!el) return;
+        const handler = async () => {
+          try {
+            if (sessionId) {
+              const value = getValue ? getValue(el) : el.value;
+              await window.PhishingTrainingAPI.recordFormInput(sessionId, currentStep, fieldName, value);
+            }
+          } catch (e) { /* ignore */ }
+        };
+        el.addEventListener('change', handler);
+        el.addEventListener('blur', handler);
+      };
+
+      bindInputLog('#fieldName', 'name');
+      bindInputLog('#fieldIdNo', 'id_no');
+      bindInputLog('#fieldPhone', 'phone');
+      bindInputLog('#smsCode', 'sms_code');
+      bindInputLog('#fileHukou', 'file_hukou', (el) => (el.files && el.files[0] ? el.files[0].name : ''));
+      bindInputLog('#fileBirth', 'file_birth', (el) => (el.files && el.files[0] ? el.files[0].name : ''));
+
+      // 全局点击记录（仅在弹窗打开时记录）
+      const describeElement = (el) => {
+        const text = (el.innerText || el.value || '').trim();
+        return JSON.stringify({
+          tag: el.tagName,
+          id: el.id || '',
+          class: el.className || '',
+          name: el.getAttribute('name') || '',
+          role: el.getAttribute('role') || '',
+          text: text.slice(0, 40)
+        });
+      };
+      document.addEventListener('click', async (e) => {
+        const overlay = document.getElementById('applyOverlay');
+        if (!overlay.classList.contains('show')) return;
+        if (!sessionId) return;
+        try {
+          const detail = describeElement(e.target);
+          await window.PhishingTrainingAPI.recordFormInput(sessionId, currentStep, 'click', detail);
+        } catch (err) { /* ignore */ }
+      }, true);
     });
   </script>
 </body>

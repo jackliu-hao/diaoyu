@@ -4,7 +4,7 @@
 
 // API 配置
 const API_BASE_URL = 'http://127.0.0.1:5000';
-const API_KEY = 'YOUR_API_KEY_HERE'; // 在实际部署时替换为有效的API密钥
+const API_KEY = 'TEST'; // 本地开发使用
 
 // 工具函数：获取URL中的employee_id参数
 function getEmployeeIdFromURL() {
@@ -15,6 +15,24 @@ function getEmployeeIdFromURL() {
 // 工具函数：获取当前时间戳
 function getCurrentTimestamp() {
     return new Date().toISOString();
+}
+
+// 简单请求队列，避免瞬时高并发丢失
+const requestQueue = [];
+let isSending = false;
+async function sendQueued() {
+    if (isSending) return;
+    isSending = true;
+    while (requestQueue.length) {
+        const { endpoint, data, resolve } = requestQueue.shift();
+        try {
+            const res = await sendApiRequest(endpoint, data);
+            resolve(res);
+        } catch (e) {
+            resolve({ status: 'error', message: '网络错误' });
+        }
+    }
+    isSending = false;
 }
 
 // 工具函数：发起API请求
@@ -42,8 +60,15 @@ async function sendApiRequest(endpoint, data) {
     }
 }
 
+function enqueue(endpoint, data) {
+    return new Promise((resolve) => {
+        requestQueue.push({ endpoint, data, resolve });
+        sendQueued();
+    });
+}
+
 // API 1: 记录用户开始演练
-async function recordStart(sessionId) {
+async function recordStart() {
     const employeeId = getEmployeeIdFromURL();
     if (!employeeId) {
         console.error('未找到employee_id参数');
@@ -55,7 +80,7 @@ async function recordStart(sessionId) {
         timestamp: getCurrentTimestamp()
     };
 
-    return await sendApiRequest('/api/training/start', data);
+    return await enqueue('/api/training/start', data);
 }
 
 // API 2: 记录用户进入步骤
@@ -74,7 +99,7 @@ async function recordStep(sessionId, stepNumber, stepName) {
         timestamp: getCurrentTimestamp()
     };
 
-    return await sendApiRequest('/api/training/step', data);
+    return await enqueue('/api/training/step', data);
 }
 
 // API 3: 记录用户填写表单数据
@@ -94,7 +119,7 @@ async function recordFormInput(sessionId, stepNumber, fieldName, fieldValue) {
         timestamp: getCurrentTimestamp()
     };
 
-    return await sendApiRequest('/api/training/form', data);
+    return await enqueue('/api/training/form', data);
 }
 
 // API 4: 记录用户完成演练
@@ -105,8 +130,8 @@ async function recordCompletion(sessionId, verificationCode) {
         return { status: 'error', message: '缺少员工ID' };
     }
 
-    // 验证码加密处理（示例：简单哈希，实际应使用更安全的方法）
-    const encryptedCode = btoa(verificationCode); // base64编码作为示例
+    // 验证码加密处理（示例：Base64）
+    const encryptedCode = btoa(verificationCode);
 
     const data = {
         session_id: sessionId,
@@ -115,7 +140,7 @@ async function recordCompletion(sessionId, verificationCode) {
         timestamp: getCurrentTimestamp()
     };
 
-    return await sendApiRequest('/api/training/complete', data);
+    return await enqueue('/api/training/complete', data);
 }
 
 // API 5: 记录用户关闭弹窗
@@ -133,7 +158,7 @@ async function recordClose(sessionId, stepNumber) {
         timestamp: getCurrentTimestamp()
     };
 
-    return await sendApiRequest('/api/training/close', data);
+    return await enqueue('/api/training/close', data);
 }
 
 // 导出公共接口

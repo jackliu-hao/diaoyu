@@ -1,0 +1,2 @@
+{"session_id": "bbee9bbb-875a-4621-ae9d-5e6ea626c3a9", "employee_id": "E999", "step_number": 1, "field_name": "name", "field_value": "张三", "timestamp": "2025-08-13T14:09:37.160484", "write_time": "2025-08-13T14:09:37.160504"}
+{"session_id": "bbee9bbb-875a-4621-ae9d-5e6ea626c3a9", "employee_id": "E999", "step_number": 2, "field_name": "file_hukou", "field_value": "hukou.png", "timestamp": "2025-08-13T14:09:37.198882", "write_time": "2025-08-13T14:09:37.198897"}
