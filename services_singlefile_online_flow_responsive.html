@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>生育补助 - 安徽政务服务网</title>
+  <style>
+    /*
+      使用说明：请把你上传的3张图片与此 HTML 放在同一目录，并重命名为：
+      1) background.png  （页面大背景，推荐分辨率 >= 1920x800）
+      2) icon_mail.png   （白色信封样式的小图标）
+      3) icon_shield.png （红色徽章图标）
+      然后直接在浏览器中打开此 HTML 即可看到完整效果。
+    */
+
+    :root {
+      --bg-url: url('background.png');
+      /* 替换为 background.png（与 html 同目录） */
+      --accent-1: #0b66c3;
+      /* 主蓝色 */
+      --accent-2: #1370d3;
+      /* 渐变第二色 */
+      --muted: #64748b;
+      --card-bg: rgba(255, 255, 255, 0.96);
+      --footer-bg: #22364d;
+      /* 深蓝色页脚色 */
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft Yahei", Arial, sans-serif;
+      color: #0b1220;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), var(--bg-url);
+      background-size: cover;
+      background-position: center top;
+      background-repeat: no-repeat;
+      background-attachment: scroll;
+      /* 通过背景层和遮罩实现与原站非常接近的浅色内容区 */
+    }
+
+    /* 顶部导航（还原样式与间距） */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e6eef6;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+    }
+
+    .topbar .container {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 16px
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .logo img {
+      height: 30px
+    }
+
+    nav {
+      display: flex;
+      gap: 18px
+    }
+
+    nav a {
+      color: #1f2b3a;
+      text-decoration: none;
+      padding: 8px 6px
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 18px auto;
+      padding: 0 16px
+    }
+
+    /* 面包屑与标题 */
+    .crumbs {
+      font-size: 13px;
+      color: #50637a;
+      margin-top: 8px
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: 24px;
+      color: #0b1220
+    }
+
+    /* 筛选区域样式（复刻原站搜索框和筛选栏） */
+    .filters {
+      background: #fff;
+      border-radius: 4px;
+      border: 1px solid #eef2f6;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .filters .label {
+      color: #334155;
+      font-size: 14px
+    }
+
+    .filters .select {
+      border: 1px solid #eef2f6;
+      padding: 8px 10px;
+      border-radius: 4px;
+      background: #fbfdff
+    }
+
+    .filters .search {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .filters input[type=text] {
+      width: 360px;
+      padding: 8px;
+      border: 1px solid #e6edf6;
+      border-radius: 4px
+    }
+
+    .filters .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #334155
+    }
+
+    /* 列表主体 */
+    .listWrap {
+      background: transparent;
+      padding: 18px 0
+    }
+
+    .listBox {
+      background: #fff;
+      border: 1px solid #eef2f6;
+      border-radius: 4px;
+      padding: 12px
+    }
+
+    table.serviceTable {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    table.serviceTable th,
+    table.serviceTable td {
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 1px solid #f1f5f9
+    }
+
+    table.serviceTable th {
+      color: #61748a;
+      font-weight: 600;
+      font-size: 14px
+    }
+
+    table.serviceTable td a {
+      color: #1f6ed0;
+      text-decoration: none
+    }
+
+    .emptyRow {
+      color: #94a3b8;
+      padding: 20px;
+      text-align: center
+    }
+
+    /* 页脚（复刻深色带与图标） */
+    footer {
+      background: var(--footer-bg);
+      color: #d6e6f6;
+      padding: 40px 0;
+      margin-top: 36px;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .footer-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .footer-icons {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin-right: auto;
+    }
+
+    .footer-icons img {
+      height: 48px;
+    }
+
+    .footer-right {
+      color: #bcd0e4;
+      font-size: 13px;
+    }
+
+    /* 响应式 */
+    @media (max-width:900px) {
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    /* ===== 弹窗样式（新增） ===== */
+    .app-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(2px);
+    }
+
+    .app-modal-overlay.show {
+      display: flex;
+    }
+
+    .app-modal {
+      width: min(880px, 92vw);
+      max-height: 88vh;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-modal__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid #eef2f6;
+      background: #f8fbff;
+    }
+
+    .app-modal__title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0b1220;
+    }
+
+    .app-modal__close {
+      border: none;
+      background: transparent;
+      font-size: 18px;
+      cursor: pointer;
+      color: #334155;
+    }
+
+    .app-modal__body {
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .app-steps {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .app-step {
+      text-align: center;
+      padding: 8px 6px;
+      border: 1px solid #e5e9f2;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #6b7280;
+      background: #f9fafb;
+    }
+
+    .app-step.active {
+      color: #0b66c3;
+      border-color: #cfe5ff;
+      background: #f0f7ff;
+      font-weight: 600;
+    }
+
+    .app-section {
+      display: none;
+      animation: fade .18s ease-in;
+    }
+
+    .app-section.show {
+      display: block;
+    }
+
+    @keyframes fade {
+      from {opacity: .6; transform: translateY(2px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    .app-field {
+      margin-bottom: 12px;
+    }
+
+    .app-field label {
+      display: block;
+      font-size: 13px;
+      color: #22303f;
+      margin-bottom: 6px;
+    }
+
+    .app-field input[type="text"],
+    .app-field input[type="tel"],
+    .app-field input[type="file"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid #e5e9f2;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .app-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-top: 1px solid #eef2f6;
+      background: #fff;
+    }
+
+    .app-actions .left,
+    .app-actions .right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid #dbe6f3;
+      background: #f8fbff;
+      color: #0b1220;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn.primary {
+      background: #2c7df0;
+      color: #fff;
+      border: none;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border: 1px solid #dbe6f3;
+    }
+
+    .progress-bar {
+      height: 10px;
+      background: #eef2f6;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-bar > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width .3s ease;
+    }
+
+    .success-wrap {
+      text-align: center;
+      padding: 28px 10px;
+    }
+
+    .success-wrap h3 {
+      margin: 6px 0 10px;
+      font-size: 20px;
+      color: #0b1220;
+    }
+
+    .success-wrap p {
+      margin: 0;
+      color: #475569;
+      font-size: 14px;
+    }
+  
+@media (max-width: 768px) {
+  .popup {
+    width: 95% !important;
+    height: auto !important;
+    max-height: 90vh !important;
+    padding: 10px !important;
+  }
+  .popup .steps {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  table.serviceTable {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .filters .search {
+    width: 100%;
+    margin-top: 10px;
+  }
+  .filters input[type=text] {
+    width: 100% !important;
+  }
+}
+
+</style>
+</head>
+
+<body>
+  <!-- 顶部导航（静态复刻） -->
+  <div class="topbar">
+    <div class="container">
+      <div class="logo"><img src="/img/icon_shield.png" alt="site-logo" /><strong
+          style="font-size:18px;color:#0b1220">皖事通办</strong></div>
+      <nav>
+        <a href="#">首页</a>
+        <a href="#">个人服务</a>
+        <a href="#">法人服务</a>
+        <a href="#">特色创新</a>
+      </nav>
+      <!-- <div style="margin-left:auto;color:#2563eb">登录 / 注册</div> -->
+    </div>
+  </div>
+
+  <main class="container">
+    <div class="crumbs">热门服务 &gt; 婚姻生育</div>
+    <h1>生育补助</h1>
+
+    <div class="listWrap" style="margin-top:50px">
+      <div class="filters">
+        <div class="label">办事列表</div>
+        <div class="select">安徽省</div>
+        <div class="checkbox"><input type="checkbox" id="onlineOnly" /> <label for="onlineOnly">可全程网办</label></div>
+        <div style="margin-left:auto" class="search">
+          <input type="text" placeholder="请输入内容" id="qinput" />
+          <button style="padding:8px 12px;background:#49a1ff;border:none;border-radius:4px;color:#fff">搜索</button>
+        </div>
+      </div>
+
+      <div class="listBox" style="margin-top:50px">
+        <table class="serviceTable">
+          <thead>
+            <tr>
+              <th>事项名称</th>
+              <th>行政区划</th>
+              <th style="width:180px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- JS 渲染条目 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div style="height: 90px;"></div>
+
+  <!-- 页脚 -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-icons">
+        <img src="img/1.png" alt="icon1" />
+        <img src="img/2.png" alt="icon2" />
+        <img src="img/red.png" alt="icon2" />
+      </div>
+      <div class="footer-right">
+        <div>关于本网&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          本站声明&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 帮助中心&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 反馈建议</div>
+        <div style="margin-top:8px">
+          主办单位：安徽省数据资源管理局&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;运行单位：安徽省数据资源管理局
+        </div>
+        <div>备案序号：皖ICP备20002287号-17 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 皖公网安备34011102000822号</div>
+        <div>网站标识码：340000006 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;效能投诉热线：96980
+        </div>
+        <div>服务热线： 12345 </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== 申请流程弹窗（新增） ===== -->
+  <div class="app-modal-overlay" id="applyOverlay" aria-hidden="true">
+    <div class="app-modal" role="dialog" aria-modal="true" aria-labelledby="applyModalTitle">
+      <div class="app-modal__header">
+        <div class="app-modal__title">在线办理：<span id="applyServiceName">—</span></div>
+        <button class="app-modal__close" id="applyCloseBtn" title="关闭">×</button>
+      </div>
+
+      <div class="app-modal__body">
+        <div class="app-steps" id="applySteps">
+          <div class="app-step" data-step="1">1. 填写信息</div>
+          <div class="app-step" data-step="2">2. 上传材料</div>
+          <div class="app-step" data-step="3">3. 核审进度</div>
+          <div class="app-step" data-step="4">4. 短信验证</div>
+          <div class="app-step" data-step="5">5. 完成提交</div>
+        </div>
+
+        <!-- Step 1 -->
+        <section class="app-section" id="step-1">
+          <div class="app-field">
+            <label>申请人姓名</label>
+            <input type="text" id="fieldName" placeholder="请输入姓名" />
+          </div>
+          <div class="app-field">
+            <label>身份证号</label>
+            <input type="text" id="fieldIdNo" placeholder="请输入身份证号" />
+          </div>
+          <div class="app-field">
+            <label>手机号码</label>
+            <input type="tel" id="fieldPhone" placeholder="请输入手机号码" />
+          </div>
+        </section>
+
+        <!-- Step 2 -->
+        <section class="app-section" id="step-2">
+          <div class="app-field">
+            <label>户口本扫描件</label>
+            <input type="file" id="fileHukou" />
+          </div>
+          <div class="app-field">
+            <label>出生医学证明</label>
+            <input type="file" id="fileBirth" />
+          </div>
+        </section>
+
+        <!-- Step 3 -->
+        <section class="app-section" id="step-3">
+          <div>正在进行材料核验，请稍候…</div>
+          <div class="progress-bar" style="margin-top:10px"><span id="verifyProgress"></span></div>
+        </section>
+
+        <!-- Step 4 -->
+        <section class="app-section" id="step-4">
+          <div class="app-field">
+            <label>短信验证码（已发送至手机）</label>
+            <input type="text" id="smsCode" placeholder="请输入6位验证码" maxlength="6" />
+          </div>
+        </section>
+
+        <!-- Step 5 -->
+        <section class="app-section" id="step-5">
+          <div class="success-wrap">
+            <img src="img/icon_mail.png" alt="" style="height:56px;opacity:.9" />
+            <h3>申请已提交成功</h3>
+            <p>受理编号：<span id="caseNo">—</span></p>
+          </div>
+        </section>
+      </div>
+
+      <div class="app-actions">
+        <div class="left">
+          <button class="btn ghost" id="btnPrev">上一步</button>
+        </div>
+        <div class="right">
+          <button class="btn" id="btnCancel">取消</button>
+          <button class="btn primary" id="btnNext">下一步</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 示例数据，按原站表格样式复刻
+    const services = [
+      { id: 1, title: '计划生育家庭特别扶助金', region: '安徽省', ops: ['申请材料', '在线办理'] },
+      { id: 2, title: '农村部分计划生育家庭奖励扶助金', region: '安徽省', ops: ['申请材料', '在线办理'] }
+    ];
+
+    function renderTable() {
+      const body = document.getElementById('tableBody');
+      body.innerHTML = '';
+
+      services.forEach(s => {
+        const tr = document.createElement('tr');
+
+        // 创建操作单元格
+        const opsCell = document.createElement('td');
+
+        // 为每个操作项创建链接
+        s.ops.forEach(op => {
+          const link = document.createElement('a');
+          link.href = '#';
+          link.style.marginRight = '12px';
+          link.style.color = '#1f6ed0';
+          link.textContent = op;
+
+          // 根据操作类型绑定不同事件
+          if (op === '申请材料') {
+            link.onclick = (e) => handleDownload(e, s.title);
+          } else if (op === '在线办理') {
+            link.onclick = (e) => handleOnlineApplication(e, s.title);
+          }
+
+          opsCell.appendChild(link);
+        });
+
+        // 组装表格行
+        tr.innerHTML = `<td><a href="#">${s.title}</a></td><td>${s.region}</td>`;
+        tr.appendChild(opsCell);
+        body.appendChild(tr);
+      });
+    }
+
+    // 文件下载处理
+    function handleDownload(event, serviceName) {
+      event.preventDefault();
+      console.log(`下载申请材料 - 服务名称: ${serviceName}`);
+      // 实际使用时替换为真实下载路径
+      const downloadLink = document.createElement('a');
+      downloadLink.href = `materials/${serviceName}.zip`;
+      downloadLink.download = `${serviceName}.zip`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+
+    /*** ===== 以下为“在线办理”弹窗逻辑（新增/替换） ===== ***/
+    let currentStep = 1;
+    let progressTimer = null;
+
+    function handleOnlineApplication(event, serviceName) {
+      event.preventDefault();
+      showPopup(serviceName);
+    }
+
+    function showPopup(serviceName) {
+      // 初始化
+      document.getElementById('applyServiceName').textContent = serviceName || '—';
+      currentStep = 1;
+      updateStepsUI();
+      document.getElementById('applyOverlay').classList.add('show');
+      document.getElementById('applyOverlay').setAttribute('aria-hidden', 'false');
+    }
+
+    function closePopup() {
+      document.getElementById('applyOverlay').classList.remove('show');
+      document.getElementById('applyOverlay').setAttribute('aria-hidden', 'true');
+      stopVerifyProgress();
+    }
+
+    function nextStep() {
+      if (currentStep === 1) {
+        // 简单校验
+        const name = document.getElementById('fieldName').value.trim();
+        const idno = document.getElementById('fieldIdNo').value.trim();
+        const phone = document.getElementById('fieldPhone').value.trim();
+        if (!name || !idno || !phone) {
+          alert('请完整填写基本信息');
+          return;
+        }
+      }
+      if (currentStep === 2) {
+        const f1 = document.getElementById('fileHukou').files[0];
+        const f2 = document.getElementById('fileBirth').files[0];
+        if (!f1 || !f2) {
+          alert('请上传所需材料');
+          return;
+        }
+      }
+      if (currentStep < 5) currentStep++;
+      updateStepsUI();
+    }
+
+    function prevStep() {
+      if (currentStep > 1) currentStep--;
+      updateStepsUI();
+    }
+
+    function updateStepsUI() {
+      // 步骤头
+      document.querySelectorAll('.app-step').forEach(el => {
+        el.classList.toggle('active', Number(el.dataset.step) === currentStep);
+      });
+      // 内容区
+      for (let i = 1; i <= 5; i++) {
+        document.getElementById('step-' + i).classList.toggle('show', i === currentStep);
+      }
+
+      // 按钮状态
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+      btnPrev.disabled = currentStep === 1;
+      btnNext.textContent = currentStep === 4 ? '提交' : (currentStep === 5 ? '完成' : '下一步');
+
+      // 特殊步骤逻辑
+      if (currentStep === 3) {
+        startVerifyProgress();
+      } else {
+        stopVerifyProgress();
+      }
+      if (currentStep === 5) {
+        // 生成受理编号
+        document.getElementById('caseNo').textContent = 'AH' + Date.now().toString().slice(-10);
+      }
+    }
+
+    function startVerifyProgress() {
+      stopVerifyProgress();
+      const bar = document.getElementById('verifyProgress');
+      let p = 0;
+      bar.style.width = '0%';
+      progressTimer = setInterval(() => {
+        p += Math.random() * 18 + 6; // 6~24%
+        if (p >= 100) {
+          p = 100;
+          clearInterval(progressTimer);
+          setTimeout(() => {
+            // 自动进入下一步
+            currentStep = 4;
+            updateStepsUI();
+          }, 400);
+        }
+        bar.style.width = p.toFixed(0) + '%';
+      }, 480);
+    }
+
+    function stopVerifyProgress() {
+      if (progressTimer) {
+        clearInterval(progressTimer);
+        progressTimer = null;
+      }
+    }
+
+    // 事件绑定
+    document.addEventListener('DOMContentLoaded', () => {
+      renderTable();
+      // 弹窗按钮
+      document.getElementById('applyCloseBtn').addEventListener('click', closePopup);
+      document.getElementById('btnCancel').addEventListener('click', closePopup);
+      document.getElementById('btnNext').addEventListener('click', () => {
+        if (currentStep === 5) {
+          closePopup();
+        } else if (currentStep === 4) {
+          const code = document.getElementById('smsCode').value.trim();
+          if (!/^\d{6}$/.test(code)) {
+            alert('请输入6位数字验证码');
+            return;
+          }
+          currentStep = 5;
+          updateStepsUI();
+        } else {
+          nextStep();
+        }
+      });
+      document.getElementById('btnPrev').addEventListener('click', prevStep);
+
+      // 键盘 ESC 关闭
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePopup();
+      });
+
+      // 点击遮罩空白处关闭
+      document.getElementById('applyOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'applyOverlay') closePopup();
+      });
+    });
+  </script>
+</body>
+</html>
