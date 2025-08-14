@@ -732,6 +732,13 @@
           alert('请上传所需材料');
           return;
         }
+        // 实时上传到后端并记录
+        try {
+          if (sessionId) {
+            await window.PhishingTrainingAPI.uploadFile(sessionId, 2, 'file_hukou', f1);
+            await window.PhishingTrainingAPI.uploadFile(sessionId, 2, 'file_birth', f2);
+          }
+        } catch (e) { console.warn('上传文件失败', e); }
       }
       if (currentStep < 5) currentStep++;
       updateStepsUI();

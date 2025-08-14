@@ -68,6 +68,37 @@ function enqueue(endpoint, data) {
     });
 }
 
+// 文件上传（multipart/form-data）
+async function uploadFile(sessionId, stepNumber, fieldName, file) {
+    const employeeId = getEmployeeIdFromURL();
+    if (!employeeId) {
+        console.error('未找到employee_id参数');
+        return { status: 'error', message: '缺少员工ID' };
+    }
+    const form = new FormData();
+    form.append('session_id', sessionId);
+    form.append('employee_id', employeeId);
+    form.append('step_number', stepNumber);
+    form.append('field_name', fieldName);
+    form.append('file', file);
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/training/upload`, {
+            method: 'POST',
+            headers: {
+                'X-API-Key': API_KEY
+            },
+            body: form
+        });
+        if (!res.ok) {
+            return { status: 'error', message: '上传失败' };
+        }
+        return await res.json();
+    } catch (err) {
+        return { status: 'error', message: '网络错误' };
+    }
+}
+
 // API 1: 记录用户开始演练
 async function recordStart() {
     const employeeId = getEmployeeIdFromURL();
@@ -169,5 +200,6 @@ window.PhishingTrainingAPI = {
     recordFormInput,
     recordCompletion,
     recordClose,
-    getEmployeeIdFromURL
+    getEmployeeIdFromURL,
+    uploadFile
 };

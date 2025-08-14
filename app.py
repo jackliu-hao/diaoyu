@@ -8,6 +8,7 @@ import os
 import threading
 from openpyxl import Workbook, load_workbook
 import fcntl
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 CORS(app)  # 启用跨域支持
@@ -19,6 +20,8 @@ if not os.path.exists('logs'):
 LOGS_DIR = 'logs'
 EXCEL_FILE = os.path.join(LOGS_DIR, 'training_records.xlsx')
 LOCK_FILE = os.path.join(LOGS_DIR, 'training_records.lock')
+UPLOADS_DIR = os.path.join(LOGS_DIR, 'uploads')
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 excel_lock = threading.Lock()
 
@@ -26,8 +29,10 @@ EXCEL_SHEETS = {
     'starts': ['write_time', 'timestamp', 'session_id', 'employee_id'],
     'steps': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number', 'step_name'],
     'forms': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number', 'field_name', 'field_value'],
+    'uploads': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number', 'field_name', 'original_filename', 'saved_path', 'file_size_bytes', 'mime_type'],
     'completions': ['write_time', 'timestamp', 'session_id', 'employee_id', 'verification_code'],
-    'closures': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number']
+    'closures': ['write_time', 'timestamp', 'session_id', 'employee_id', 'step_number'],
+    'operations': ['write_time', 'timestamp', 'session_id', 'employee_id', 'operation_type', 'step_number', 'name', 'value', 'extra']
 }
 
 
@@ -90,11 +95,28 @@ def append_to_excel(sheet_name: str, record: dict):
             finally:
                 fcntl.flock(lf, fcntl.LOCK_UN)
 
+
+def log_operation(operation_type: str, session_id: str, employee_id: str, step_number: int, name: str = '', value: str = '', extra: str = '', timestamp: str = None):
+    """Log an aggregate operation row into operations sheet."""
+    ts = timestamp or datetime.datetime.now().isoformat()
+    append_to_excel('operations', {
+        'write_time': datetime.datetime.now().isoformat(),
+        'timestamp': ts,
+        'session_id': session_id,
+        'employee_id': employee_id,
+        'operation_type': operation_type,
+        'step_number': step_number,
+        'name': name,
+        'value': value,
+        'extra': extra
+    })
+
 # 模拟数据库存储
 training_data = {
     'sessions': {},
     'steps': [],
     'forms': [],
+    'uploads': [],
     'completions': [],
     'closures': []
 }
@@ -161,6 +183,8 @@ def record_start():
         **start_record
     }
     append_to_excel('starts', excel_record)
+    # 记录聚合操作
+    log_operation('start', session_id, data['employee_id'], step_number=0, name='start', value='', extra='', timestamp=excel_record['timestamp'])
     
     print(f"开始演练: 员工ID={data['employee_id']}, 会话ID={session_id}")
     
@@ -196,6 +220,8 @@ def record_step():
     training_data['steps'].append(step_record)
     write_record_to_file('step', step_record)
     append_to_excel('steps', {'write_time': datetime.datetime.now().isoformat(), **step_record})
+    # 聚合操作
+    log_operation('step', data['session_id'], data['employee_id'], step_number=int(data['step_number']), name=data['step_name'], value='', extra='', timestamp=step_record['timestamp'])
     
     print(f"进入步骤: 员工ID={data['employee_id']}, 步骤={data['step_name']}")
     
@@ -231,6 +257,8 @@ def record_form_input():
     training_data['forms'].append(form_record)
     write_record_to_file('form', form_record)
     append_to_excel('forms', {'write_time': datetime.datetime.now().isoformat(), **form_record})
+    # 聚合操作
+    log_operation('form', data['session_id'], data['employee_id'], step_number=int(data['step_number']), name=data['field_name'], value=data['field_value'], extra='', timestamp=form_record['timestamp'])
     
     print(f"表单输入: 员工ID={data['employee_id']}, 字段={data['field_name']}, 值={data['field_value']}")
     
@@ -238,6 +266,59 @@ def record_form_input():
         'status': 'success',
         'message': '记录成功'
     })
+
+# API 3.1: 上传材料（图片/文件）
+@app.route('/api/training/upload', methods=['POST'])
+def upload_material():
+    if not verify_api_key():
+        return jsonify({'status': 'error', 'message': '无效的API Key'}), 401
+
+    # multipart/form-data
+    session_id = request.form.get('session_id')
+    employee_id = request.form.get('employee_id')
+    step_number = request.form.get('step_number')
+    field_name = request.form.get('field_name', '')
+    file = request.files.get('file')
+
+    if not all([session_id, employee_id, step_number, file]):
+        return jsonify({'status': 'error', 'message': '缺少必需字段或文件'}), 400
+
+    if session_id not in training_data['sessions']:
+        return jsonify({'status': 'error', 'message': '无效的会话ID'}), 400
+
+    original_filename = file.filename or 'unknown'
+    safe_name = secure_filename(original_filename)
+    ts = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+    # 目录 logs/uploads/<employee>/<session>
+    target_dir = os.path.join(UPLOADS_DIR, employee_id, session_id)
+    os.makedirs(target_dir, exist_ok=True)
+    saved_path = os.path.join(target_dir, f"{ts}_{safe_name}")
+    file.save(saved_path)
+
+    file_size = os.path.getsize(saved_path)
+    mime_type = file.mimetype or ''
+
+    upload_record = {
+        'session_id': session_id,
+        'employee_id': employee_id,
+        'step_number': int(step_number),
+        'field_name': field_name,
+        'original_filename': original_filename,
+        'saved_path': saved_path,
+        'file_size_bytes': file_size,
+        'mime_type': mime_type,
+        'timestamp': datetime.datetime.now().isoformat()
+    }
+
+    training_data.setdefault('uploads', []).append(upload_record)
+    write_record_to_file('upload', upload_record)
+    append_to_excel('uploads', {'write_time': datetime.datetime.now().isoformat(), **upload_record})
+    # 聚合操作
+    log_operation('upload', session_id, employee_id, step_number=int(step_number), name=field_name, value=original_filename, extra=saved_path, timestamp=upload_record['timestamp'])
+
+    print(f"上传材料: 员工ID={employee_id}, 文件={original_filename}, 保存为={saved_path}")
+
+    return jsonify({'status': 'success', 'message': '上传成功', 'path': saved_path})
 
 # API 4: 记录用户完成演练
 @app.route('/api/training/complete', methods=['POST'])
@@ -270,6 +351,8 @@ def record_completion():
     training_data['completions'].append(completion_record)
     write_record_to_file('complete', completion_record)
     append_to_excel('completions', {'write_time': datetime.datetime.now().isoformat(), **completion_record})
+    # 聚合操作
+    log_operation('complete', data['session_id'], data['employee_id'], step_number=5, name='verification_code', value=decoded_code, extra='', timestamp=completion_record['timestamp'])
     
     print(f"完成演练: 员工ID={data['employee_id']}, 验证码={decoded_code}")
     
@@ -303,6 +386,8 @@ def record_close():
     training_data['closures'].append(close_record)
     write_record_to_file('close', close_record)
     append_to_excel('closures', {'write_time': datetime.datetime.now().isoformat(), **close_record})
+    # 聚合操作
+    log_operation('close', data['session_id'], data['employee_id'], step_number=int(data['step_number']), name='close', value='', extra='', timestamp=close_record['timestamp'])
     
     print(f"关闭弹窗: 员工ID={data['employee_id']}, 步骤={data['step_number']}")
     
